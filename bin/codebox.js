@@ -56,6 +56,7 @@ cli.command('run [folder]')
     that.box = process.env.CODEBOXIO_BOXID;
     that.key = process.env.CODEBOXIO_TOKEN;
     that.codeboxio = process.env.CODEBOXIO_HOST || "https://api.codebox.io";
+    that.users = that.users || process.env.CODEBOX_USERS;
 
     // Default options
     that.directory = projectDirectory || process.env.WORKSPACE_DIR || "./";
