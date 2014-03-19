@@ -83,19 +83,32 @@ define([
                 'menubar': ".cb-menubar",
                 'menubar button': ".cb-menubar .cb-commands-menubar .menu-command-item>.btn",
 
+                // statusbar
+                'statusbar': ".cb-statusbar",
+                'statusbar button': ".cb-statusbar .cb-commands-menubar .menu-command-item>.btn",
+
                 // lateral bar
                 'lateralbar': ".cb-lateralbar",
                 'lateralbar commands': ".cb-lateralbar .lateral-commands",
-                'lateralbar body': ".cb-lateralbar .lateral-body",
+                'lateralbar body': ".cb-panels",
+
+                // body
+                'body': ".cb-body",
 
                 // tabs
                 'tabs section': ".cb-tabs .section",
-                'tabs header': ".cb-tabs .section .tabs-header",
-                'tabs content': ".cb-tabs .section .tabs-content",
+                'tabs header': ".cb-tabs .tabs-section .tabs-section-header",
+                'tabs content': ".cb-tabs .tabs-section .tabs-section-content",
                 'tabs tab': ".component-tab",
 
                 // operations
                 'operations operation': ".cb-operations .operation-item",
+
+                // palette
+                'palette': ".cb-commands-palette",
+                'palette input': ".cb-commands-palette input",
+                'palette results': ".cb-commands-palette .results",
+                'palette results command': ".cb-commands-palette .results .command",
 
                 // alerts
                 'alerts': ".cb-alerts",

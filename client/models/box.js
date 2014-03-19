@@ -36,6 +36,9 @@ define([
                 'codebox': this
             });
             this.root.getByPath("/");
+            this.on("change:name", function() {
+                this.root.set("name", this.get("name"));
+            }, this);
 
             // Active file
             this.activeFile = "/";
@@ -207,13 +210,6 @@ define([
          */
         listShells: function() {
             return rpc.execute("shells/list");
-        },
-
-        /*
-         *  Return an http proxy url
-         */
-        proxyUrl: function(url) {
-            return this.baseUrl+"/proxy/"+encodeURIComponent(url);
         },
 
         /*

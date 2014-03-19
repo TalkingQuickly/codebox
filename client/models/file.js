@@ -4,21 +4,18 @@ define([
     "hr/hr",
     'core/backends/rpc',
     "core/backends/vfs",
+    "core/debug/manager",
     'models/command',
+    "utils/string",
     "utils/url",
     "utils/languages",
     "utils/filesync",
     "utils/dialogs",
     "utils/uploader",
+    "utils/clipboard",
     "core/operations"
-], function(Q, _, hr, rpc, vfs, Command, Url, Languages, FileSync, dialogs, Uploader, operations) {
+], function(Q, _, hr, rpc, vfs, debugManager, Command, string, Url, Languages, FileSync, dialogs, Uploader, clipboard, operations) {
     var logging = hr.Logger.addNamespace("files");
-
-    if (typeof String.prototype.endsWith !== 'function') {
-        String.prototype.endsWith = function(suffix) {
-            return this.indexOf(suffix, this.length - suffix.length) !== -1;
-        };
-    }
 
     var File = hr.Model.extend({
         defaults: {
@@ -39,9 +36,13 @@ define([
         initialize: function() {
             File.__super__.initialize.apply(this, arguments);
             this.codebox = this.options.codebox || require("core/box");
-            this.content = null;
+
+            // Content for new file
+            this.newFileContent = this.options.newFileContent || "";
+
             this.modified = false;
             this._loading = false;
+            this._uniqueId = Date.now()+_.uniqueId("file");
             this.read = this.download;
 
             // Change in codebox : file deleted
@@ -57,7 +58,9 @@ define([
             }, this);
 
             // Listen to codebox event
-            this.codebox.on("box:watch:change", function(e) {
+            this.listenTo(this.codebox, "box:watch:change", function(e) {
+                if (!this.isValid()) return;
+
                 // Event on this file itself
                 if (e.data.path == this.path()) {
                     this.trigger("file:change:"+e.data.change, e.data);
@@ -67,12 +70,12 @@ define([
                 if (_.contains(["create", "delete"], e.data.change) && this.isChild(e.data.path)) {
                     this.trigger("files:change:"+e.data.change, e.data);
                 }
-            }, this);
-            this.codebox.on("box:files:write", function(e) {
+            });
+            this.listenTo(this.codebox, "box:files:write", function(e) {
                 if (e.data.path == this.path()) {
                     this.trigger("file:write", e.data);
                 }
-            }, this);
+            });
             return this;
         },
 
@@ -165,7 +168,7 @@ define([
             path = this.path(path);
             var url = "/vfs"+path;
             if (force_directory == null) force_directory = this.isDirectory();
-            if (force_directory && !url.endsWith("/")) {
+            if (force_directory && !string.endsWith(url, "/")) {
                 url = url+"/";
             }
             return url;
@@ -179,8 +182,8 @@ define([
                 if (this.get("href").length == 0) { return null; }
                 path = Url.parse(this.get("href")).pathname.replace("/vfs", "");
             }
-            
-            if (path.endsWith("/")) {
+
+            if (string.endsWith(path, "/")) {
                 path = path.slice(0, -1)
             }
             if (path.length == 0) {
@@ -300,11 +303,32 @@ define([
         },
 
         /*
+         *  Return current breakpoints for this file
+         */
+        getBreakpoints: function() {
+            return debugManager.breakpoints.getFileBreakpoints(this.path());
+        },
+
+        /*
+         *  Set breakpoints for this file
+         */
+        setBreakpoints: function(points) {
+            return debugManager.breakpoints.setFileBreakpoints(this.path(), points);
+        },
+
+        /*
+         *  Clear breakpoints for this file
+         */
+        clearBreakpoints: function() {
+            return this.setBreakpoints([]);
+        },
+
+        /*
          *  Return file sync environment id
          */
         syncEnvId: function() {
             if (this.isNewfile()) {
-                return "temporary://"+Date.now()+_.uniqueId("file");
+                return "temporary://"+this._uniqueId;
             }
             return "file://"+this.path();
         },
@@ -325,7 +349,7 @@ define([
                     return memo;
                 }, "file-text-o");
             } else {
-                return "folder-o";
+                return "folder";
             }
         },
 
@@ -354,11 +378,11 @@ define([
             path = this.path(path);
             if (path == "/") {
                 var fileData = {
-                    "name": "/",
+                    "name": this.codebox.get("name"),
                     "size": 0,
                     "mtime": 0,
                     "mime": "inode/directory",
-                    "href": "/vfs/",
+                    "href": location.protocol+"//"+location.host+"/vfs/",
                     "exists": true
                 };
                 this.set(fileData);
@@ -415,6 +439,8 @@ define([
                 filename = null;
             }
 
+            if (this.isNewfile() && !filename) return Q(this.newFileContent);
+
             options = _.defaults(options || {}, {
                 redirect: false
             });
@@ -422,8 +448,6 @@ define([
                 window.open(this.exportUrl(),'_blank');
             } else {
                 return this.loading(this.vfsRequest("read", this.vfsUrl(filename, false)).then(function(content) {
-                    that.setCache(content);
-                    that.modifiedState(false);
                     return content;
                 }));
             }
@@ -435,39 +459,8 @@ define([
         write: function(content, filename) {
             var that = this;
             return this.loading(this.vfsRequest("write", this.vfsUrl(filename, false), content).then(function() {
-                if (!filename) {
-                    that.setCache(content);
-                    that.modifiedState(false);
-                }
                 return that.path(filename);
             }));
-        },
-
-        /*
-         *  Return content
-         */
-        getCache: function(callback) {
-            if (this.content != null) {
-                return Q(this.content);
-            } else {
-                //Download can't work for newfiles
-                if (this.isNewfile()) {
-                    return Q("");
-                }
-
-                return this.download();
-            }
-        },
-
-        /*
-         *  Define cache content content
-         */
-        setCache: function(content) {
-            var modified = this.content != content;
-            this.content = content;
-            this.modifiedState(modified);
-            this.trigger("cache", this.content);
-            return this;
         },
 
         /*
@@ -539,8 +532,37 @@ define([
         rename: function(name) {
             var parentPath = this.parentPath();
             var newPath = parentPath+"/"+name;
-            return this.loading(this.vfsRequest("rename", this.vfsUrl(newPath), {
+            return this.loading(this.vfsRequest("special", this.vfsUrl(newPath), {
                 "renameFrom": this.path()
+            }));
+        },
+
+        /*
+         *  Copy this file
+         *
+         *  @to: folder to copy to
+         *  @newName: (optional) new name in the to folder
+         */
+        copyTo: function(to, newName) {
+            newName = newName || this.get("name");
+            var toPath = to+"/"+newName;
+
+            return this.loading(this.vfsRequest("special", this.vfsUrl(toPath), {
+                "copyFrom": this.path()
+            }));
+        },
+
+        /*
+         *  Copy a file in this folder
+         *
+         *  @from: file to copy
+         */
+        copyFile: function(from, newName) {
+            newName = newName || from.split("/").pop();
+            var toPath = this.path()+"/"+newName;
+
+            return this.loading(this.vfsRequest("special", this.vfsUrl(toPath, false), {
+                "copyFrom": from
             }));
         },
 
@@ -679,20 +701,25 @@ define([
         // Return context menu
         contextMenu: function() {
             var that = this;
+            var files = require("core/files");
+
             return function() {
                 var menu = [];
 
                 // Open with
                 if (!that.isDirectory()) {
-                    menu.push({
-                        'id': "file.open.select",
-                        'type': "action",
-                        'title': "Open with...",
-                        'action': function() {
-                            that.open({
-                                'userChoice': true
-                            });
-                        }
+                    var handlers = files.getHandlers(that);
+                    _.each(handlers, function(handler) {
+                        menu.push({
+                            'type': "action",
+                            'title': handler.name,
+                            'icons': {
+                                'menu': handler.icon
+                            },
+                            'action': function() {
+                                return handler.open(that);
+                            }
+                        });
                     });
                     menu.push({ 'type': "divider" });
                 }
@@ -700,7 +727,6 @@ define([
                 // File or directory
                 if (!that.isRoot()) {
                     menu.push({
-                        'id': "file.rename",
                         'type': "action",
                         'title': "Rename...",
                         'action': function() {
@@ -708,9 +734,8 @@ define([
                         }
                     });
                     menu.push({
-                        'id': "file.remove",
                         'type': "action",
-                        'title': "Remove",
+                        'title': "Delete "+(that.isDirectory() ? "Folder" : "File"),
                         'action': function() {
                             return that.actionRemove();
                         }
@@ -718,10 +743,66 @@ define([
                     menu.push({ 'type': "divider" });
                 }
 
+                if (!that.isDirectory()) {
+                    menu.push({
+                        'type': "action",
+                        'title': "Copy",
+                        'action': function() {
+                            clipboard.setData("file", that.path());
+                        }
+                    });
+                    menu.push({
+                        'type': "action",
+                        'title': "Cut",
+                        'action': function() {
+                            clipboard.setData("file", that.path(), {
+                                cut: true
+                            });
+                        }
+                    });
+                } else {
+                    menu.push({
+                        'type': "action",
+                        'title': "Paste",
+                        'flags': (!clipboard.hasData("file") ? "disabled" : ""),
+                        'action': function() {
+                            if (clipboard.hasData("file")) {
+                                var path = clipboard.getData("file");
+                                var cut = clipboard.getRaw().options.cut == true;
+
+                                // Load file we are copying
+                                var toCopy = new File();
+                                return toCopy.getByPath(path)
+                                .then(function() {
+                                    // Copy file
+                                    return toCopy.copyTo(that.path());
+                                })
+                                .then(function() {
+                                    // If cut then delete the previsous file and clear clipboard
+                                    if (cut == false) return;
+
+                                    // Clear clipboard
+                                    clipboard.clear();
+
+                                    // Remove file copied
+                                    return toCopy.remove();
+                                })
+                                .fail(function(err) {
+                                    logging.error("error copy", err.stack, err);
+                                })
+                                .done(function() {
+                                    // Clear temporary model
+                                    toCopy.destroy();
+                                })
+                            }
+                        }
+                    });
+                }
+                menu.push({ 'type': "divider" });
+
                 if (that.isDirectory()) {
                     // Directory
                     menu.push({
-                        'id': "file.create",
                         'type': "action",
                         'title': "New file",
                         'action': function() {
@@ -729,7 +810,6 @@ define([
                         }
                     });
                     menu.push({
-                        'id': "file.mkdir",
                         'type': "action",
                         'title': "New folder",
                         'action': function() {
@@ -737,7 +817,6 @@ define([
                         }
                     });
                     menu.push({
-                        'id': "file.refresh",
                         'type': "action",
                         'title': "Refresh",
                         'action': function() {
@@ -745,13 +824,11 @@ define([
                         }
                     });
                     menu.push({
-                        'id': "file.upload",
                         'type': "menu",
                         'title': "Add",
                         'offline': false,
                         'menu': [
                             {
-                                'id': "file.upload.files",
                                 'type': "action",
                                 'title': "Files",
                                 'offline': false,
@@ -760,7 +837,6 @@ define([
                                 }
                             },
                             {
-                                'id': "file.upload.directory",
                                 'type': "action",
                                 'title': "Directories",
                                 'offline': false,
@@ -774,7 +850,6 @@ define([
                     });
                 } else {
                     menu.push({
-                        'id': "file.download",
                         'type': "action",
                         'title': "Download",
                         'action': function() {
@@ -783,7 +858,6 @@ define([
                     });
                     menu.push({ 'type': "divider" });
                     menu.push({
-                        'id': "file.run",
                         'type': "action",
                         'title': "Run",
                         'offline': false,

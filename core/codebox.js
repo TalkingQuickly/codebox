@@ -18,7 +18,7 @@ var start = function(config) {
     var prepare = Q();
 
     // Options
-    config = _.deepExtend({
+    config = _.merge({
         'root': process.env.WORKSPACE_DIR || process.cwd(),
         'title': process.env.WORKSPACE_NAME,
         'public': process.env.WORKSPACE_PUBLIC != "false",
@@ -252,9 +252,6 @@ var start = function(config) {
             // Search
             "./cb.search",
 
-            // Proxy
-            "./cb.proxy.http",
-
             // Watch (file modifications)
             "./cb.watch",
 
@@ -271,6 +268,7 @@ var start = function(config) {
             "./cb.rpc.box",
             "./cb.rpc.shells",
             "./cb.rpc.auth",
+            "./cb.rpc.debug",
             "./cb.rpc.search",
             "./cb.rpc.addons",
             "./cb.rpc.deploy",

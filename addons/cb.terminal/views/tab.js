@@ -28,6 +28,7 @@ define([
             var that = this;
             TerminalTab.__super__.initialize.apply(this, arguments);
             this.connected = false;
+            this.setTabState("loading", true);
 
             // Init menu
             this.menu.menuSection([
@@ -72,11 +73,15 @@ define([
                     this.focus();
                 }
             }, this);
+            this.on("tab:layout", function() {
+                that.resize();
+            }, this);
 
             this.setTabTitle("Terminal - "+this.sessionId);
 
 
             this.shell.once('data', function() {
+                that.setTabState("loading", false);
                 that.resize();
             });
 
@@ -160,6 +165,9 @@ define([
         // Block propagation of clicks to sublevel
         clickTerm: function(e) {
             e.stopPropagation();
+
+            // We stop propagation so we need to active the tab manually
+            this.openTab();
         }
     });
 

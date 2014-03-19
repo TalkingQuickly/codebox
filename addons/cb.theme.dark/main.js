@@ -3,6 +3,9 @@ define([
 ], function(aceTheme) {
     var themes = codebox.require("core/themes");
 
+    var bgDarker = "#1a1d24";
+    var colorDarker = "#505c66";
+
     var bgDark = "#222830";
     var colorDark = "#64737e";
 
@@ -20,30 +23,25 @@ define([
             'theme': aceTheme
         },
         styles: {
-            // Scrollbar
-            /*scrollbar: {
-                'background': "transparent",
-                'width': "10px",
-
-                corner: {
-
-                },
-
-                thumb: {
-                    'background': "#4b505b"
-                }
-            },*/
-
-
             // Top menubar
             menubar: {
-                'background': bgNormal,
-                'color': colorNormal,
+                'background': bgDarker,
+                'color': colorDark,
                 'border-color': "#111",
 
                 button: {
-                    'border-color': bgNormal,
-                    'border-bottom-color': "transparent"
+                    'border-color': bgNormal
+                }
+            },
+
+            // Statusbar
+            statusbar: {
+                'background': bgDarker,
+                'color': colorDark,
+                'border-color': "#111",
+
+                button: {
+                    'border-color': bgNormal
                 }
             },
 
@@ -60,6 +58,12 @@ define([
                 }
             },
 
+            // Body
+            body: {
+                'background': bgDark,
+                'color': colorDark
+            },
+
             // Tabs
             tabs: {
                 section: {
@@ -70,7 +74,7 @@ define([
                     'color': colorDark
                 },
                 content: {
-                    'background': bgLight,
+                    'background': bgLight
                 },
                 tab: {
                     '&.active': {
@@ -95,6 +99,28 @@ define([
                     'background': bgLight,
                     'color': colorLight,
                     'border-color': "transparent"
+                }
+            },
+
+            // Palette
+            palette: {
+                'background': bgDark,
+                'border-color': bgDarker,
+
+                input: {
+                    'background': bgLight,
+                    'border-color': bgDarker,
+                    'color': colorLight
+                },
+
+                results: {
+                    'background': bgLight,
+                    'border-color': bgDarker,
+                    'color': colorLight,
+
+                    command: {
+                        'border-color': bgDarker
+                    }
                 }
             }
         }

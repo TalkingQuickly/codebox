@@ -1,8 +1,14 @@
 define([
     "hr/utils",
     "hr/dom",
-    "hr/hr"
+    "hr/hr",
+    "text!resources/templates/dialogs/alert.html",
+    "text!resources/templates/dialogs/confirm.html",
+    "text!resources/templates/dialogs/fields.html",
+    "text!resources/templates/dialogs/prompt.html",
+    "text!resources/templates/dialogs/select.html"
 ], function(_, $, hr) {
+
     var DialogView = hr.View.extend({
         className: "component-dialog modal fade",
         defaults: {
@@ -24,8 +30,8 @@ define([
             "click .action-confirm": "actionConfirm"
         },
         template: function() {
-            if (this.options.template != null) return this.options.template;
-            return "dialogs/"+this.options.dialog+".html";
+            if (this.options.template != null) return require("text!"+this.options.template);
+            return require("text!resources/templates/dialogs/"+this.options.dialog+".html");
         },
         templateContext: function() {
             return {
@@ -76,17 +82,18 @@ define([
             // Unbind dowument keydown
             $(document).unbind("keydown", this.keydownHandler);
 
+            this.trigger("close", this.value, e);
+
             // Hide modal
             this.$el.modal('hide');
-            DialogView.current = null;
         },
 
         /*
          *  (event) Modal is hidden
          */
-        hidden: function() {
-            this.trigger("close", this.value);
-            this.$el.remove();
+        hidden: function(e) {
+            this.remove();
+            DialogView.current = null;
         },
 
         /*
@@ -106,7 +113,7 @@ define([
                 e.preventDefault();
             }
             this.value = this._getValue();
-            this.close();
+            this.close(e);
         },
 
         /*

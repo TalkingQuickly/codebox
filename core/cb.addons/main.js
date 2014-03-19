@@ -9,6 +9,7 @@ var exec = require('child_process').exec;
 
 var Addon = require("./addon");
 var manager = require("./manager");
+var registry = require("./registry");
 
 // GZIP static middleware
 var gzipStatic = require('connect-gzip-static');
@@ -118,20 +119,22 @@ function setup(options, imports, register, app) {
         logger.log("Install add-on", git, "ref="+gitRef);
 
         tempDir = path.join(configTempPath, "t"+Date.now());
-        console.log(tempDir);
 
         // Create temporary dir
         return Q.nfcall(fs.mkdir, tempDir).then(function() {
             // Clone git repo
             return Gittle.clone(git, tempDir);
-        }).then(function(repo) {
+        })
+        .then(function(repo) {
             // Checkout the addon ref
             return repo.checkout(gitRef);
-        }).then(function() {
+        })
+        .then(function() {
             // Load addon
             addon = new Addon(tempDir, addonsOptions);
             return addon.load();
-        }).then(function() {
+        })
+        .then(function() {
             // Blacklist
             if (addon.isBlacklisted()) {
                 return Q.reject(new Error("Addon "+addon.infos.name+"is blacklisted"));
@@ -139,23 +142,30 @@ function setup(options, imports, register, app) {
 
             // Valid installation of addon with a hook
             return hooks.use("addons", addon.infos);
-        }).then(function() {
+        })
+        .then(function() {
             // Copy to addons dir
             return addon.transfer(configAddonsPath);
-        }).then(function(newAddon) {
+        })
+        .then(function(newAddon) {
             addon = newAddon;
-
+        })
+        .fin(function() {
             // Remove temporary dir
             return Q.nfcall(wrench.rmdirRecursive, tempDir, false);
-        }).then(function() {
+        })
+        .then(function() {
             // Install node dependencies
             return addon.installDependencies();
-        }).then(function() {
+        })
+        .then(function() {
             // If client side addon then optimize it
             return addon.optimizeClient();
-        }).then(function() {
+        })
+        .then(function() {
             return addon.start(app);
-        }).then(function() {
+        })
+        .then(function() {
             // Emit events
             events.emit('addons.install', addon.infos);
 
@@ -193,12 +203,6 @@ function setup(options, imports, register, app) {
         });
     })
     .then(manager.runAddonsOperation(function(addon) {
-        // Install node dependencies
-        return addon.installDependencies();
-    }, {
-        failOnError: false
-    }))
-    .then(manager.runAddonsOperation(function(addon) {
         // Build non optimized addons
         return addon.optimizeClient();
     }, {
@@ -214,6 +218,7 @@ function setup(options, imports, register, app) {
         logger.log("Addons are ready");
         return {
             'addons': {
+                'registry': registry.get,
                 'list': _.partial(loadAddonsInfos, configAddonsPath),
                 'install': installAddon,
                 'uninstall': uninstallAddon

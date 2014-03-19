@@ -30,6 +30,13 @@
             border-radius: 0px;
             padding: 0px;
 
+            .marker-debug {
+                position: absolute;
+                background: #5e9ef3;
+                opacity: .5;
+                width: 100% !important;
+            }
+
             .marker-cursor {
                 position: absolute;
                 border-left: 2px solid red;
@@ -86,6 +93,22 @@
                 border-right: 3px solid #0ff;
                 border-bottom: 3px solid #0ff;
             }
+
+            .ace_gutter-cell.ace_breakpoint {
+                position: relative;
+
+                &:before {
+                    content: " ";
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 16px;
+                    border: 2px solid #fff;
+                    position: absolute;
+                    left: 4px;
+                    background: #5E9EF3;
+                    top: 3px;
+                }
+            } 
         }
     }
 }

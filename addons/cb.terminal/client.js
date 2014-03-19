@@ -66,8 +66,12 @@ define([
 
     // Add opening command
     var command = commands.register("terminal.open", {
+        category: "Terminal",
         title: "New Terminal",
-        icon: "terminal",
+        description: "New Tab Terminal",
+        icons: {
+            'default': "terminal",
+        },
         offline: false,
         shortcuts: [
             "alt+t"
@@ -77,6 +81,7 @@ define([
         var tab = tabs.add(TerminalTab, {
             'shellId': shellId
         }, {
+            'type': "terminal",
             'section': "terminals"
         });
 
@@ -84,11 +89,23 @@ define([
         return tab;
     });
 
+    // Restorer for tabs
+    tabs.addRestorer("terminal", function(tabInfos) {
+        var tab = tabs.add(TerminalTab, {}, {
+            'type': "terminal",
+            'section': "terminals"
+        });
+
+        return tab;
+    });
+
     // List terminals menu
     var terminalsList = Command.register("terminal.list", {
+        category: "Terminal",
         title: "Open Terminals",
+        type: "menu",
         offline: false,
-        type: "menu"
+        search: false
     });
 
     var refreshList = function() {

@@ -10,29 +10,38 @@ var ProjectType = require('./project').ProjectType;
 // Supported project types
 // This list is ordered
 var SUPPORTED = [
+    // PaaS
     require("./appengine"),
-    require("./makefile"),
     require("./procfile"),
+    require("./parse"),
+
+    // Frameworks
+    require("./django"),
+    require("./gradle"),
+    require("./grails"),
+    require("./meteor"),
+
+    // Languages
     require("./c"),
     require("./d"),
     require("./dart"),
     require("./go"),
     require("./clojure"),
-    require("./gradle"),
-    require("./grails"),
     require("./java"),
     require("./logo"),
     require("./php"),
     require("./node"),
-    require("./meteor"),
     require("./play"),
     require("./python"),
     require("./ruby"),
     require("./scala"),
     require("./lua"),
+
+    // Fallbacks
     require("./static"),
-    require("./parse")
+    require("./makefile")
 ];
+
 
 // Returns true if lang is supported otherwise false
 function supports(projectDir, projectType) {
@@ -62,9 +71,11 @@ var detectProjectTypes = function(projectDir) {
         }
 
         // List of supported project types
-        return _.filter(SUPPORTED, function(lang, idx) {
+        return _.chain(SUPPORTED)
+        .filter(function(lang, idx) {
             return supported_list[idx];
-        });
+        })
+        .value();
     })
     .fail(utils.constant([]));
 };
