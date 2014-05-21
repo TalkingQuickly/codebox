@@ -1,4 +1,5 @@
 define(["views/dialog"], function(GitDialog) {
+    var Q = codebox.require("hr/promise");
     var commands = codebox.require("core/commands/toolbar");
     var app = codebox.require("core/app");
     var box = codebox.require("core/box");
@@ -14,7 +15,7 @@ define(["views/dialog"], function(GitDialog) {
         return rpc.execute("git/status")
         .then(function() {
             updateMenu(true);
-            return updateBranchesMenu();
+            return updateBranchesMenu(false);
         }, function(err) {
             updateMenu(false);
         })
@@ -26,7 +27,7 @@ define(["views/dialog"], function(GitDialog) {
         'type': "menu",
         'offline': false
     });
-    var updateBranchesMenu = function() {
+    var updateBranchesMenu = function(doUpdateStatus) {
         return rpc.execute("git/branches")
         .then(function(branches) {
             branchesMenu.menu.reset(_.map(branches, function(branch) {
@@ -41,10 +42,14 @@ define(["views/dialog"], function(GitDialog) {
                             })
                         }, {
                             title: "Checkout '"+ref+"'"
-                        }).then(updateBranchesMenu);
+                        })
+                        .then(updateBranchesMenu);
                     }
                 }
             }));
+        }, function(err) {
+            if (doUpdateStatus !== false) updateStatus();
+            return Q.reject(err);
         });
     };
 
@@ -77,6 +82,8 @@ define(["views/dialog"], function(GitDialog) {
 
                 return dialogs.fields("Need authentication:", fields)
                 .then(method);
+            } else {
+                return Q.reject(err);
             }
         })
     };
@@ -117,7 +124,8 @@ define(["views/dialog"], function(GitDialog) {
                     'offline': false,
                     'action': function() {
                         return operations.start("git.clone", function(op) {
-                            return dialogs.prompt("Clone Remote Repository", "Remote repository URI:").then(function(url) {
+                            return dialogs.prompt("Clone Remote Repository", "Remote repository URI:")
+                            .then(function(url) {
                                 if (!url) return;
                                 return handleHttpAuth(function(creds) {
                                     return rpc.execute("git/clone", {

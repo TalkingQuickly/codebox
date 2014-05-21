@@ -23,5 +23,8 @@ settings.json
 
 /addons/cb.files.editor/ace/
 **/addon-built.js
+**/node_modules/
+*/**/addon-built.js
+*/**/node_modules/
 /extras/
 

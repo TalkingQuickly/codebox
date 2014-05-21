@@ -23,7 +23,8 @@ define([
     'core/search/commands',
     'core/search/files',
     'core/search/tags',
-    'core/search/addons'
+    'core/search/addons',
+    'core/search/code'
 ], function (hr, url, dialogs, alerts, loading, GridView, templateFile,
 box, session, addons, box, files, commands, menu, statusbar, palette, tabs, panels, operations, localfs, themes) {
 
@@ -83,9 +84,14 @@ box, session, addons, box, files, commands, menu, statusbar, palette, tabs, pane
             hr.Offline.on("state", function(state) {
                 if (!state) {
                     alerts.show("Caution: Connection lost, Workspace is now in Offline mode", 5000);
+                    if (!localfs.isSyncEnabled()) {
+                        dialogs.alert("Caution: Connection lost", "Offline file synchronization is not enabled for this workspace, enable it first when online.");
+                    }
                 } else {
-                    alerts.show("Connection detected. Switching to Codebox online", 5000);
-                    location.reload();
+                    dialogs.confirm("Connection detected", "Save changes before refreshing. Do you want to refresh now (unsaved changes will be lost) ?")
+                    .then(function() {
+                        location.reload();
+                    });
                 }
             });
             hr.Offline.on("update", function() {

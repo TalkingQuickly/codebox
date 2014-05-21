@@ -3,34 +3,41 @@ define([
     'hr/utils',
     'vendors/mousetrap'
 ], function (hr, _, Mousetrap) {
+    var originalStopCallback = Mousetrap.stopCallback;
+    Mousetrap.stopCallback = function(e, element) {
+        if (e.mousetrap) {
+            return false;
+        }
+        return originalStopCallback(e, element);
+    };
+
+    /**
+     * Keyboard shortcuts manager
+     *
+     * @class
+     * @constructor
+     */
     var Keyboard = hr.Class.extend({
-        /*
-         *  Initialize the keyboard navigation
-         */
         initialize: function() {
             this.bindings = {};
             return this;
         },
 
-        /*
-         *  Enable key event
+        /**
+         * Enable keyboard shortcut for a specific event
+         *
+         * @param {jqueryEvent} e
          */
         enableKeyEvent: function(e) {
             e.mousetrap = true;
         },
 
         /*
-         *  Handle manually a keyboard event
-         */
-        handleKeyEvent: function(e) {
-            e.mousetrap = true;
-            return Mousetrap.handleKeyEvent(e);
-        },
+         * Bind keyboard shortcuts to callback
 
-        /*
-         *  Bind keyboard shortcuts to callback
-         *  @keys : shortcut or list of shortcuts
-         *  @callback : function to call
+         * @param {string|array} keys shortcut or list of shortcuts
+         * @param {function} callback function to call for this shortcut
+         * @param {object} context object which is binding key
          */
         bind: function(keys, callback, context) {
             // List of shortcuts for same action
@@ -42,7 +49,7 @@ define([
             // Map shortcut -> action
             if (_.isObject(keys)) {
                 _.each(keys, function(method, key) {
-                    this.bind(key, method);
+                    this.bind(key, method, callback);
                 }, this)
                 return;
             }
@@ -54,12 +61,26 @@ define([
                     this.bindings[keys].trigger("action", e);
                 }, this));
             }
-            this.bindings[keys].on("action", callback, context);
+            context.listenTo(this.bindings[keys], "action", callback);
             return;
         },
 
         /*
-         *  Convert shortcut or list of shortcut to a string
+         * Prevent default browser shortcut
+
+         * @param {string|array} keys shortcut to ignore
+         */
+        preventDefault: function(keys) {
+            return this.bind(keys, function(e) {
+                e.preventDefault();
+            }, this);
+        },
+
+        /*
+         * Convert shortcut or list of shortcut to a string
+
+         * @param {string|array} shortcut shortcut or list of shortcuts
+         * @return {string}
          */
         toText: function(shortcut) {
             if (_.isArray(shortcut)) shortcut = _.first(shortcut);
@@ -89,5 +110,10 @@ define([
         }
     });
 
-    return new Keyboard();
+    var keyboard = new Keyboard();
+
+    // Prevent some browser default keyboard interactions
+    keyboard.preventDefault("mod+r");
+
+    return keyboard;
 });

@@ -79,7 +79,7 @@ define([
                 return false;
             }
             
-            var result = this.get("action").apply(this, [args]);
+            var result = this.get("action").apply(this, arguments);
 
             if (Q.isPromise(result)) {
                 this.toggleFlag("running", true);
@@ -173,8 +173,8 @@ define([
                     _.each(command.get("shortcuts", []), function(shortcut) {
                         Keyboard.bind(shortcut, function(e) {
                             e.preventDefault();
-                            command.run();
-                        });
+                            this.run();
+                        }, command);
                     });
                 }
 

@@ -112,7 +112,7 @@ function start_mysql() {
     if [ -z "$(which mysqld)" ]; then
         echo "Could not start MySQL because it is not installed on the system's \$PATH"
     fi
-    
+
     # Specify that MySQL was started by this script
     # And thus we handle it's termination
     MYSQL_STARTED=true
@@ -124,7 +124,7 @@ function start_mysql() {
         return
     fi
 
-    locals needs_pwd="$(needs_sudo_pwd)"
+    local needs_pwd="$(needs_sudo_pwd)"
     # Try running in sudo or not
     if [ -n ${needs_pwd} ]; then
         sudo -n ${sudo_mysql} &
@@ -209,7 +209,7 @@ echo "Running apache2 on ${WORKSPACE} (${FOLDER})"
 /usr/sbin/apachectl -d ${FOLDER} -f ${CONF} -e info
 
 # Wait for PID_FILE to appear, timeout after 5s
-${DIR}/_waitfile.sh ${PID_FILE} 5
+bash ${DIR}/_waitfile.sh ${PID_FILE} 5
 
 # Wait for Apache process
 PID=$(cat ${PID_FILE})

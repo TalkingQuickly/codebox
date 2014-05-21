@@ -10,32 +10,6 @@ var pkg = require("../../package.json");
 
 var utils = require("../utils");
 
-var exec = function(command, options) {
-
-    var deferred = Q.defer();
-    var childProcess;
-
-    var args = Array.prototype.slice.call(arguments, 0);
-    args.push(function(err, stdout, stderr) {
-        if (err) {
-            err.message += command + ' (exited with error code ' + err.code + ')';
-            err.stdout = stdout;
-            err.stderr = stderr;
-            deferred.reject(err);
-        }
-        else {
-            deferred.resolve({
-                childProcess: childProcess,
-                stdout: stdout,
-                stderr: stderr
-            });
-        }
-    });
-
-    childProcess = child_process.exec.apply(child_process, args);
-
-    return deferred.promise;
-}
 
 var Addon = function(_rootPath, options) {
     this.root = _rootPath;
@@ -93,6 +67,11 @@ var Addon = function(_rootPath, options) {
         return fs.existsSync(path.join(this.root, "addon-built.js"));
     };
 
+    // Check if node dependencies seems to be installed
+    this.areDependenciesInstalled = function() {
+        return fs.existsSync(path.join(this.root, "node_modules")) || this.isOptmized();
+    };
+
     // Check if an addon has node dependencies
     this.hasDependencies = function() {
         return _.size(this.infos.dependencies || {}) > 0;
@@ -122,7 +101,7 @@ var Addon = function(_rootPath, options) {
         var addonPath = this.root;
 
         // R.js bin
-        var rjs = path.resolve(__dirname, "../../node_modules/.bin/r.js");
+        var rjs = path.resolve(__dirname, "../../node_modules/requirejs/bin/r.js");
 
         // Path to the require-tools
         var requiretoolsPath = path.resolve(__dirname, "require-tools");
@@ -153,7 +132,7 @@ var Addon = function(_rootPath, options) {
         };
 
         // Build command for r.js
-        var command = rjs+" -o "+_.reduce(utils.deepkeys(optconfig), function(s, value, key) {
+        var command = "node "+rjs+" -o "+_.reduce(utils.deepkeys(optconfig), function(s, value, key) {
             return s+key+"="+value+" ";
         }, "");
 
@@ -162,7 +141,9 @@ var Addon = function(_rootPath, options) {
         return Q.nfcall(fs.unlink, output).fail(function() {
             return Q();
         }).then(function() {
-            return exec(command)
+            return utils.exec(command, {
+                env: process.env
+            })
         }).then(function() {
             logger.log("Finished", that.infos.name, "optimization");
             return Q(that);
@@ -183,7 +164,10 @@ var Addon = function(_rootPath, options) {
             }
         }
         logger.log("Install dependencies for", this.root);
-        return exec("cd "+this.root+" && npm install .").then(function() {
+        return utils.exec("npm install .", {
+            cwd: this.root,
+            env: process.env
+        }).then(function() {
             return Q(that);
         });
     };

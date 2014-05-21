@@ -64,15 +64,20 @@ define([
         }
 
         handler = _.defaults(handler, {
+            // Mark this file as active when open with
             'setActive': false,
+
+            // Fallback when no correct handler
             'fallback': false,
+
+            // Priority of this handler
             'position': 10
         });
 
         handler.id = handlerId;
 
         if (handler.View) {
-            handler.open = function(file) {
+            handler.open = function(file, fileOptions) {
                 var path = file.path();
                 var uniqueId = handler.id+":"+file.syncEnvId();
 
@@ -82,7 +87,8 @@ define([
                 // Add new tab
                 var tab = tabs.add(FileTab, {
                     "model": file,
-                    "handler": handler
+                    "handler": handler,
+                    'fileOptions': fileOptions
                 }, {
                     "uniqueId": uniqueId,
                     "type": "file",
@@ -97,6 +103,8 @@ define([
                 tab.on("tab:close", function(state) {
                     if (handler.setActive) activeFiles.remove(file);
                 });
+
+                tab.setFileOptions(fileOptions);
             };
         }
 
@@ -133,17 +141,23 @@ define([
     };
 
     // Open file with handler
-    var openFileHandler = function(handler, file) {
+    var openFileHandler = function(handler, file, fileOptions) {
         // Add to recent files
         if (!file.isNewfile()) recentFiles.add(file);
 
-        return Q(handler.open(file)).then(function() {
+        // Options for the file handler
+        fileOptions = _.defaults(fileOptions || {}, {
+            line: null,
+            pattern: null
+        });
+
+        return Q(handler.open(file, fileOptions)).then(function() {
             box.setActiveFile(file);
         });
-    }
+    };
 
     // Select to open a file with any handler
-    var openFileWith = function(file) {
+    var openFileWith = function(file, fileOptions) {
         var choices = {};
         _.each(handlers, function(handler) {
             choices[handler.id] = handler.name;
@@ -155,7 +169,7 @@ define([
 
         return dialogs.select("Can't open this file", "Sorry, No handler has been found to open this file. Try to find and install an add-on to manage this file or select one of the following handlers:", choices).then(function(value) {
             var handler = handlers[value];
-            return Q(openFileHandler(handler, file));
+            return Q(openFileHandler(handler, file, fileOptions));
         });
     };
 
@@ -163,8 +177,12 @@ define([
     var openFile = function(file, options) {
         options = _.defaults({}, options || {}, {
             'userChoice': null,
-            'useFallback': true
+            'useFallback': true,
+            'line': null
         });
+
+        // Options for the file handler
+        var fileOptions = _.pick(options, ["line", "pattern"]);
 
         if (_.isString(file)) {
             var nfile = new File({
@@ -184,11 +202,11 @@ define([
 
         // All choices
         if (_.size(possibleHandlers) == 0) {
-            return openFileWith(file);
+            return openFileWith(file, fileOptions);
         }
 
         if (_.size(possibleHandlers) == 1 || (options.userChoice != true)) {
-            return Q(openFileHandler(_.first(possibleHandlers), file));
+            return Q(openFileHandler(_.first(possibleHandlers), file, fileOptions));
         }
 
         var choices = {};
@@ -202,12 +220,12 @@ define([
 
         return dialogs.select("Open with...", "Select one of the following handlers to open this file:", choices).then(function(value) {
             var handler = handlers[value];
-            return Q(openFileHandler(handler, file));
+            return Q(openFileHandler(handler, file, fileOptions));
         });
     };
 
     // Open a new file
-    var openNew = function(name, content) {
+    var openNew = function(name, content, options) {
         name = name || "untitled";
 
         // Create a temporary file
@@ -223,7 +241,7 @@ define([
             'exists': false
         });
 
-        return openFile(f);
+        return openFile(f, options);
     };
 
     return {

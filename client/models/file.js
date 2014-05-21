@@ -166,7 +166,9 @@ define([
          */
         vfsUrl: function(path, force_directory) {
             path = this.path(path);
-            var url = "/vfs"+path;
+            var basePath = window.location.pathname;
+            basePath.substring(0, basePath.lastIndexOf('/')+1);
+            var url = basePath+"vfs"+path;
             if (force_directory == null) force_directory = this.isDirectory();
             if (force_directory && !string.endsWith(url, "/")) {
                 url = url+"/";
@@ -817,13 +819,6 @@ define([
                         }
                     });
                     menu.push({
-                        'type': "action",
-                        'title': "Refresh",
-                        'action': function() {
-                            return that.actionRefresh();
-                        }
-                    });
-                    menu.push({
                         'type': "menu",
                         'title': "Add",
                         'offline': false,
@@ -847,6 +842,32 @@ define([
                                 }
                             }
                         ]
+                    });
+                    menu.push({ 'type': "divider" });
+                    menu.push({
+                        'type': "action",
+                        'title': "Refresh",
+                        'action': function() {
+                            return that.actionRefresh();
+                        }
+                    });
+                    menu.push({
+                        'type': "action",
+                        'title': "Find in Folder",
+                        'action': function() {
+                            return Command.run("code.search", {
+                                'path': that.path()
+                            });
+                        }
+                    });
+                    menu.push({
+                        'type': "action",
+                        'title': "Open Terminal",
+                        'action': function() {
+                            return Command.run("terminal.open", null, {
+                                'cwd': that.path()
+                            });
+                        }
                     });
                 } else {
                     menu.push({

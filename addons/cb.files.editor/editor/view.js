@@ -138,6 +138,12 @@ define([
                     'action': function() {
                         aceWhitespace.convertIndentation(that.editor.session, "\t", 1);
                     }
+                },
+                {
+                    'title':"Strip Whitespaces",
+                    'action': function() {
+                        that.stripspaces();
+                    }
                 }
             ]).menuSection([
                 this.collaboratorsMenu
@@ -219,6 +225,20 @@ define([
             this.editor.getSession().on("changeMode", function() {
                 jshint.applySettings(that.editor);
             });
+
+
+            // Clear command on Windows/ChromeOS Ctrl-Shift-P
+            this.editor.commands.addCommands([{
+                name: "commandpalette",
+                bindKey: {
+                    win: "Ctrl-Shift-P",
+                    mac: "Command-Shift-P"
+                },
+                exec: function(editor, line) {
+                    return false;
+                },
+                readOnly: true
+            }]);
 
             // Send change
             $doc.on('change', function(d) {
@@ -307,11 +327,11 @@ define([
                 this.markersC[cId] = this.editor.getSession().addMarker(range, "marker-cursor marker-"+c.color.replace("#", ""), function(html, range, left, top, config){
                     html.push("<div class='marker-cursor' style='top: "+top+"px; left: "+left+"px; border-left-color: "+c.color+"; border-bottom-color: "+c.color+";'>"
                     + "<div class='marker-cursor-nametag' style='background: "+c.color+";'>&nbsp;"+name+"&nbsp;<div class='marker-cursor-nametag-flag' style='border-right-color: "+c.color+"; border-bottom-color: "+c.color+";'></div>"
-                    + "</div>&nbsp;</div>");  
+                    + "</div>&nbsp;</div>");
                 }, true);
             }, this);
 
-            // Participant selection 
+            // Participant selection
             this.sync.on("selection:move", function(cId, c) {
                 var range = new aceRange.Range(c.start.y, c.start.x, c.end.y, c.end.x);
                 if (this.markersS[cId]) this.editor.getSession().removeMarker(this.markersS[cId]);
@@ -392,10 +412,17 @@ define([
                 this.tab.setTabState("loading", state);
             }, this);
 
+            this.sync.once("content", function() {
+                this.adaptOptions();
+            }, this);
+
             // Define file for code editor
             this.sync.setFile(this.model, {
                 'sync': editorSettings.user.get("autocollaboration") ? collaborators.size() > 1 : false
             });
+
+            // Options chnagements
+            this.on("file:options", this.adaptOptions, this);
 
             this.focus();
 
@@ -489,7 +516,26 @@ define([
         // (action) Save file
         saveFile: function(e) {
             if (e) e.preventDefault();
+            
+            if (editorSettings.user.get("stripspaces")) {
+                this.stripspaces();
+            }
+            
             this.sync.save();
+        },
+        
+        stripspaces: function(e) {
+            if (e) e.preventDefault();
+            
+            // strip all whitespaces from the current document
+            var doc = this.editor.session.doc;
+            var lines = doc.getAllLines();
+            
+            for (var i = 0; i < lines.length; ++i) {
+                var index = lines[i].search(/\s+$/);
+                if (index !== -1 && index != 0)
+                    doc.removeInLine(i, index, lines[i].length);
+            }
         },
 
         // (action) Run this file
@@ -508,8 +554,6 @@ define([
         updateDebugLine: function() {
             var position = debugManager.getPosition();
 
-            console.log("update debug position: ", position);
-
             // Clear previous marker
             if (this.debugMarker != null) {
                 this.editor.session.removeMarker(this.debugMarker);
@@ -518,6 +562,19 @@ define([
             if (position && position.filename == this.model.path()) {
                 this.debugMarker = this.editor.session.addMarker(new aceRange.Range(parseInt(position.line) - 1, 0, parseInt(position.line) - 1, 2000), "marker-debug", "line", false);
                 console.log(this.debugMarker);
+            }
+        },
+
+        // Update current line according to options
+        adaptOptions: function() {
+            if (this.fileOptions.line) {
+                this.editor.gotoLine(this.fileOptions.line);
+            } else if (this.fileOptions.pattern) {
+                this.editor.find(this.fileOptions.pattern,{
+                    regExp: false,
+                    backwards: false,
+                    wrap: true
+                });
             }
         }
     });

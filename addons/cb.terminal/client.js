@@ -1,5 +1,5 @@
 define([
-    "vendors/sh",
+    "node_modules/sh.js/build/sh",
     "views/tab"
 ], function(Terminal, TerminalTab) {
     var Command = codebox.require("models/command");
@@ -76,10 +76,15 @@ define([
         shortcuts: [
             "alt+t"
         ]
-    }, function(shellId) {
+    }, function(shellId, options) {
+        options = _.defaults(options || {}, {
+            cwd: null
+        });
+
         // Create trminal tab
         var tab = tabs.add(TerminalTab, {
-            'shellId': shellId
+            'shellId': shellId,
+            'cwd': options.cwd
         }, {
             'type': "terminal",
             'section': "terminals"

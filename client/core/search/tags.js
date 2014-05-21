@@ -9,11 +9,15 @@ define([
     var normalizeTag = function(tag) {
         return {
             "title": tag.name,
+            "label": tag.file,
             "icons": {
                 "search": "code"
             },
             "action": _.bind(function() {
-                files.open(tag.file);
+                files.open(tag.file, {
+                    // Open content "/^ foo $/"" _> "foo" in editor
+                    pattern: tag.pattern.slice(2, -2)
+                });
             }, this)
         };
     };
@@ -23,6 +27,8 @@ define([
         'id': "tags",
         'title': "Tags"
     }, function(query) {
+        if (!query) return [];
+
         return rpc.execute("codecomplete/get", {
             'query': query
         }).then(function(data) {

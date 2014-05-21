@@ -3,6 +3,8 @@ var glob = require("glob");
 var path = require('path');
 var Q = require('q');
 
+var extsToIgnore = [".gz"]
+
 var Manifest = function() {
     this.revision = 0;
     
@@ -41,10 +43,10 @@ var Manifest = function() {
             _.each(
                 // Ignore diretcories
                 _.filter(files, function(file) {
-                    return file.substr(-1) != "/" && !_.contains(except, path.join(root,file));
+                    return file.substr(-1) != "/" && !_.contains(except, path.join(root, file)) && !_.contains(extsToIgnore, path.extname(file));
                 }),
                 function(file) {
-                    that.add("CACHE", path.join(root,file));
+                    that.add("CACHE", path.join(root, file));
                 }
             );
         })

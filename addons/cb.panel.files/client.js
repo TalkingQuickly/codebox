@@ -16,9 +16,9 @@ define([
     
     // Open files panel
     panel.connectCommand(commands.register("files.tree.open", {
-        category: "Files",
+        category: "Panels",
         title: "Files",
-        description: "Open files tree",
+        description: "Open Files Panel",
         icons: {
             'default': "folder-o",
         },
@@ -72,10 +72,10 @@ define([
         {
             'id': "workspace.save.zip",
             'category': "Files",
-            'title': "Save Project As ZIP",
+            'title': "Save Project As TAR.GZ",
             'offline': false,
             'action': function() {
-                window.open("/export/zip");
+                window.open("/export/targz");
             }
         }
     ]);

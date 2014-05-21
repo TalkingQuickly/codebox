@@ -18,7 +18,7 @@ function setup(options, imports, register) {
     server.disableAuth("/manifest.appcache");
 
     // Generate manifest
-    server.app.get("/manifest.appcache", function(req, res) {
+    server.app.get("/manifest.appcache", function(req, res, next) {
         res.header("Content-Type", "text/cache-manifest");
 
         addons.list()
@@ -28,7 +28,7 @@ function setup(options, imports, register) {
             }).sort().join("-")));
 
             if (options.dev) revision = revision+"-"+startTime;
-
+            
             // Clear manifest
             return manifest.clear(revision);
         })
@@ -38,11 +38,9 @@ function setup(options, imports, register) {
                 '*'
             ]);
 
-            manifest.add("CACHE", "/");
-
             // Add static files
-            return manifest.addFolder(path.resolve(__dirname + '/../../client/build'), '/', null, [
-                "/index.html"
+            return manifest.addFolder(path.resolve(__dirname + '/../../client/build'), './', null, [
+                "index.html"
             ]);
         })
         .then(function() {
@@ -54,7 +52,7 @@ function setup(options, imports, register) {
 
                     // Addon cached resources
                     return Q.all(_.map(addon.resources(), function(resource) {
-                        return manifest.addFolder(addon.root, path.join("/static/addons/", addon.infos.name), resource);
+                        return manifest.addFolder(addon.root, path.join("static/addons/", addon.infos.name), resource);
                     }));
                 }));
             });
@@ -62,9 +60,7 @@ function setup(options, imports, register) {
             return manifest.content();
         }).then(function(content) {
             res.send(content);
-        }, function(err) {
-            res.send(500, err.message);
-        });
+        }, next);
     });
 
     // Register

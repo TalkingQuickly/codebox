@@ -1,6 +1,6 @@
 {
     "name": "codebox",
-    "version": "0.7.0",
+    "version": "0.7.6",
     "description": "Open source cloud & desktop IDE.",
     "homepage": "https://www.codebox.io",
     "author": "FriendCode Inc. <contact@friendco.de>",
@@ -40,7 +40,7 @@
         "grunt-cli": "0.1.11",
         "harbor": "0.2.0",
         "qpatch": "0.0.8",
-        "ctags": "0.8.0",
+        "ctags": "0.11.0",
         "connect-gzip-static": "0.1.1",
         "minimatch": "0.2.14",
         "semver": "2.2.1",
@@ -73,7 +73,7 @@
         }
     ],
     "scripts": {
-        "start": "[ -f .env ] && source .env || echo 'Store your environment config in .env'; ./node_modules/.bin/grunt"
+        "start": "[ -f .env ] && . ./.env || echo 'Store your environment config in .env'; ./node_modules/.bin/grunt"
     },
     "main": "index.js"
 }
